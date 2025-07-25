@@ -35,4 +35,16 @@ router.get('/get/:epc', async (req, res) => {
   }
 });
 
+router.delete('/delete/:epc', async (req, res) => {
+  const { epc } = req.params;
+
+  try {
+    const result = await db.query('DELETE FROM save_container WHERE epc = $1', [epc]);
+    res.json({ success: true });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 module.exports = router;
