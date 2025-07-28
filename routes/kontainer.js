@@ -53,7 +53,7 @@ router.post('/add-item', async (req, res) => {
 
   try {
     await db.query(
-      `INSERT INTO container_items (parent_epc, child_epc)
+      `INSERT INTO container_item (parent_epc, child_epc)
        VALUES ($1, $2)
        ON CONFLICT DO NOTHING`,
       [parent_epc, child_epc]
@@ -85,7 +85,7 @@ router.get('/full-info/:epc', async (req, res) => {
 
     const childResult = await db.query(
       `SELECT c.epc, c.nomor_kontainer
-       FROM container_items ci
+       FROM container_item ci
        JOIN save_container c ON c.epc = ci.child_epc
        WHERE ci.parent_epc = $1`,
       [epc]
