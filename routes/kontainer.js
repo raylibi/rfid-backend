@@ -89,20 +89,13 @@ router.get('/full-info/:epc', async (req, res) => {
   const { epc } = req.params;
 
   try {
+    // 1. Tetap coba cari detail parent, tapi jangan berhenti jika tidak ada.
     const kontainerResult = await db.query(
-      `SELECT epc, nomor_kontainer FROM save_container WHERE epc = $1`,
+      `SELECT nomor_kontainer FROM save_container WHERE epc = $1`,
       [epc]
     );
 
-    if (kontainerResult.rows.length === 0) {
-      return res.json({
-        epc,
-        nomor_kontainer: null,
-        is_parent: false,
-        children: []
-      });
-    }
-
+    // 2. Selalu jalankan query untuk mencari data anak.
     const childResult = await db.query(
       `SELECT c.epc, c.nomor_kontainer
        FROM container_item ci
@@ -111,12 +104,16 @@ router.get('/full-info/:epc', async (req, res) => {
       [epc]
     );
 
+    // 3. Gabungkan hasilnya.
     res.json({
-      ...kontainerResult.rows[0],
+      epc: epc,
+      nomor_kontainer: kontainerResult.rows[0]?.nomor_kontainer || null,
       is_parent: childResult.rows.length > 0,
       children: childResult.rows
     });
+    
   } catch (e) {
+    console.error("Error fetching full info:", e.message);
     res.status(500).json({ error: e.message });
   }
 });
