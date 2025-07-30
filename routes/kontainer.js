@@ -89,14 +89,12 @@ router.get('/full-info/:epc', async (req, res) => {
   const { epc } = req.params;
 
   try {
-    // 1. Tetap coba cari detail parent, tapi jangan berhenti jika tidak ada.
-    const kontainerResult = await db.query(
+    // Siapkan kedua promise query TANPA 'await'
+    const parentPromise = db.query(
       `SELECT nomor_kontainer FROM save_container WHERE epc = $1`,
       [epc]
     );
-
-    // 2. Selalu jalankan query untuk mencari data anak.
-    const childResult = await db.query(
+    const childrenPromise = db.query(
       `SELECT c.epc, c.nomor_kontainer
        FROM container_item ci
        JOIN save_container c ON c.epc = ci.child_epc
@@ -104,12 +102,18 @@ router.get('/full-info/:epc', async (req, res) => {
       [epc]
     );
 
-    // 3. Gabungkan hasilnya.
+    // Jalankan kedua promise secara bersamaan dan tunggu keduanya selesai
+    const [kontainerResult, childResult] = await Promise.all([
+      parentPromise,
+      childrenPromise,
+    ]);
+
+    // Gabungkan hasilnya seperti sebelumnya
     res.json({
       epc: epc,
       nomor_kontainer: kontainerResult.rows[0]?.nomor_kontainer || null,
       is_parent: childResult.rows.length > 0,
-      children: childResult.rows
+      children: childResult.rows,
     });
     
   } catch (e) {
