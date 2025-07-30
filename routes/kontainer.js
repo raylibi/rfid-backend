@@ -64,6 +64,26 @@ router.post('/add-item', async (req, res) => {
   }
 });
 
+// --- [Baru] Hapus child dari parent box
+router.post('/remove-item', async (req, res) => {
+  const { parent_epc, child_epc } = req.body;
+
+  if (!parent_epc || !child_epc) {
+    return res.status(400).json({ success: false, error: "parent_epc and child_epc are required." });
+  }
+
+  try {
+    await db.query(
+      `DELETE FROM container_item WHERE parent_epc = $1 AND child_epc = $2`,
+      [parent_epc, child_epc]
+    );
+    res.json({ success: true });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 // --- Endpoint full-info
 router.get('/full-info/:epc', async (req, res) => {
   const { epc } = req.params;
