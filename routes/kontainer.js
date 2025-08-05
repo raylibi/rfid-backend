@@ -37,13 +37,38 @@ router.get('/get/:epc', async (req, res) => {
 
 router.delete('/delete/:epc', async (req, res) => {
   const { epc } = req.params;
+  const client = await db.connect();
 
   try {
-    const result = await db.query('DELETE FROM save_container WHERE epc = $1', [epc]);
-    res.json({ success: true });
+    await client.query('BEGIN');
+
+    // 1. Hapus semua relasi di container_item dimana EPC ini sebagai parent
+    await client.query('DELETE FROM container_item WHERE parent_epc = $1', [epc]);
+    
+    // 2. Hapus semua relasi di container_item dimana EPC ini sebagai child
+    await client.query('DELETE FROM container_item WHERE child_epc = $1', [epc]);
+    
+    // 3. Hapus dari save_container
+    const deleteResult = await client.query('DELETE FROM save_container WHERE epc = $1', [epc]);
+
+    await client.query('COMMIT');
+    
+    console.log(`Successfully deleted EPC ${epc} and all its relations`);
+    res.json({ 
+      success: true, 
+      message: `Container ${epc} and all its relations deleted successfully`,
+      deletedRows: deleteResult.rowCount 
+    });
+    
   } catch (e) {
-    console.error(e);
-    res.status(500).json({ success: false, error: e.message });
+    await client.query('ROLLBACK');
+    console.error('Error deleting container:', e);
+    res.status(500).json({ 
+      success: false, 
+      error: e.message 
+    });
+  } finally {
+    client.release();
   }
 });
 
